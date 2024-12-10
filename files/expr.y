@@ -38,8 +38,8 @@ factor:
 
 %%
 
-void main(int argc, char **argv) {
-  yyparse();
+int main(int argc, char **argv) {
+  return yyparse();
 }
 
 void yyerror(char *s) {
