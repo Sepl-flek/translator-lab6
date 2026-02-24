@@ -1,0 +1,20 @@
+a = 10;
+b = 3;
+print a + b;
+print a * b;
+print a / b;
+
+x = 3;
+y = 4;
+print x * x + y * y;
+
+z = 5;
+if (z > 3) {
+    print z;
+}
+
+if (a == 10) {
+    print 1;
+}
+
+print (a + b) * (a - b);

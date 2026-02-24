@@ -1,32 +1,35 @@
 cmake_minimum_required(VERSION 3.16)
-
-project(ExampleParserWithFlexBison LANGUAGES C CXX)
+project(ExampleProject LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if ( NOT CMAKE_BUILD_TYPE )
-    message( "Build Type not set, defaulting to Debug..." )
-    set( CMAKE_BUILD_TYPE Debug )
+# Найти Bison и Flex
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
+# Сгенерировать parser.cpp и parser.h из parser.y
+bison_target(miniParser files/mini.y ${CMAKE_CURRENT_BINARY_DIR}/mini.tab.cpp)
+
+if(WIN32)
+  set(FLEX_FLAGS --wincompat)
 endif()
+# Сгенерировать lexer.cpp из lexer.l
+flex_target(
+  miniScanner #
+  files/mini.l #
+  ${CMAKE_CURRENT_BINARY_DIR}/lminiy.yy.cpp #
+  COMPILE_FLAGS "${FLEX_FLAGS}")
 
-if (NOT CMAKE_BUILD_TYPE EQUAL "Release")
-    add_compile_options(-DYYDEBUG=1)
+# Сказать CMake, что лексер зависит от заголовка парсера
+add_flex_bison_dependency(miniScanner miniParser)
+
+# Собрать исполняемый файл
+add_executable(main ${SOURCE_FILES} ${BISON_miniParser_OUTPUTS}
+                    ${FLEX_miniScanner_OUTPUTS})
+
+target_include_directories(main PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
+                                        ${CMAKE_CURRENT_BINARY_DIR}/out)
+if(FLEX_LIBRARIES)
+  target_link_libraries(main PRIVATE ${FLEX_LIBRARIES})
 endif()
-
-find_package(BISON)
-find_package(FLEX)
-
-BISON_TARGET(ExprParser files/expr.y ${CMAKE_CURRENT_BINARY_DIR}/expr.tab.cpp)
-FLEX_TARGET(ExprScanner files/expr.l  ${CMAKE_CURRENT_BINARY_DIR}/lexpry.yy.cpp)
-ADD_FLEX_BISON_DEPENDENCY(ExprScanner ExprParser)
-
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/out)
-file(GLOB_RECURSE SOURCE_FILES out/*.cpp)
-add_executable(main ${SOURCE_FILES}
-               ${BISON_ExprParser_OUTPUTS}
-               ${FLEX_ExprScanner_OUTPUTS}
-               )
-
-target_link_libraries(main ${FLEX_LIBRARIES})
-target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

@@ -1,0 +1,25 @@
+name: bison-flex
+
+services:
+  translator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    working_dir: /workspace
+    volumes:
+      - ./../examples:/workspace/examples
+      - ./../CMakeLists.txt:/workspace/CMakeLists.txt
+      - ./../files:/workspace/files
+    command: ["run", "/workspace/examples/valid/test.mini"]
+
+  tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile    
+    working_dir: /workspace
+    volumes:
+      - ./../examples:/workspace/examples
+      - ./../docs:/workspace/docs
+      - ./../CMakeLists.txt:/workspace/CMakeLists.txt
+      - ./../files:/workspace/files
+    command: ["test"]
