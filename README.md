@@ -15,16 +15,20 @@
 ```
 .
 ├── CMakeLists.txt          # сборочный скрипт
-├── Dockerfile              # контейнер со всем окружением
-├── docker-entrypoint.sh    # точка входа контейнера (сборка + запуск)
-├── bison-flex-install.md   # инструкции по установке инструментов
 ├── files/
 │   ├── mini.l              # лексер (правила токенизации)
 │   └── mini.y              # парсер (грамматика и интерпретация)
-└── examples/
-    ├── valid/              # положительные примеры (корректные программы)
-    ├── invalid/            # негативные примеры (программы с ошибками)
-    └── run_tests.sh        # скрипт автоматической проверки примеров
+├── examples/
+│   ├── valid/              # положительные примеры (корректные программы)
+│   ├── invalid/            # негативные примеры (программы с ошибками)
+│   └── run_tests.sh        # скрипт автоматической проверки примеров
+├── docker/
+│   ├── Dockerfile              # контейнер со всем окружением
+│   ├── docker-entrypoint.sh    # точка входа контейнера (сборка + запуск)
+│   └── bison-flex-install.md   # инструкции по установке инструментов
+└── docs/
+    └── bison-flex-install.md   # инструкции по установке инструментов
+
 ```
 
 ## Требования к сдаче задания
@@ -76,13 +80,13 @@ cmake --build build
 **Запуск на Linux / WSL:**
 
 ```bash
-./build/main test.mini
+./build/main ./examples/valid/test.mini
 ```
 
 **Запуск на Windows:**
 
 ```powershell
-.\build\Debug\main.exe test.mini
+.\build\Debug\main.exe .\examples\valid\test.mini
 ```
 
 ---
