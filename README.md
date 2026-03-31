@@ -116,29 +116,3 @@ cmake --build build
 ```powershell
 .\build\Debug\main.exe .\examples\valid\test.mini
 ```
-
----
-
-## Автоматическая проверка
-
-```bash
-./examples/run_tests.sh ./build/main
-```
-
-Ожидается:
-
-- для `examples/valid/` код возврата `0`
-- для `examples/invalid/` код возврата `!= 0`
-
----
-
-## Типичные ошибки сборки
-
-- **`Could NOT find BISON` / `Could NOT find FLEX`**  
-  Инструменты не найдены в `PATH`.
-
-- **`mini.tab.hpp not found`**  
-  Проверьте наличие `${CMAKE_CURRENT_BINARY_DIR}` в `target_include_directories`.
-
-- **`undefined reference to yywrap`**  
-  В `files/mini.l` нужна опция `%option noyywrap`.
