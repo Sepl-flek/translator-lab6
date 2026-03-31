@@ -25,11 +25,11 @@ flex_target(
 add_flex_bison_dependency(miniScanner miniParser)
 
 # Собрать исполняемый файл
-add_executable(main ${SOURCE_FILES} ${BISON_miniParser_OUTPUTS}
-                    ${FLEX_miniScanner_OUTPUTS})
+add_executable(main
+    main.cpp
+    ${BISON_miniParser_OUTPUTS}
+    ${FLEX_miniScanner_OUTPUTS}
+)
 
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
                                         ${CMAKE_CURRENT_BINARY_DIR}/out)
-if(FLEX_LIBRARIES)
-  target_link_libraries(main PRIVATE ${FLEX_LIBRARIES})
-endif()

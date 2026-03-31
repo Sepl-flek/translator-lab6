@@ -1,168 +1,97 @@
-/* ====================================================
-   mini.y — парсер и интерпретатор мини-языка
-   ==================================================== */
-
 %{
 #include <cstdio>
 #include <cstdlib>
+#include <map>
+#include <string>
 #include <cstring>
 
-/* Таблица символов: переменные a-z
-   symtab['a'-'a'] = symtab[0] — значение переменной a  */
-int symtab[26] = {0};
+int yylex();
+void yyerror(const char* s);
 
-/* Объявления для компилятора                           */
-int  yylex();
-void yyerror(const char *s);
-
-/* Вспомогательная функция для вывода ошибки с контекстом */
-extern int yylineno_manual;
+std::map<std::string, double> vars;
 %}
 
-/* ── ОБЪЯВЛЕНИЕ ТИПОВ ───────────────────────────────── */
 %union {
-    int ival;   /* Значение числового выражения или переменной */
+    double dval;
+    char* sval;
 }
 
-/* ── ТОКЕНЫ ─────────────────────────────────────────── */
-/* Токены с семантическим значением (несут int) */
-%token <ival> NUMBER VAR
+%token <dval> NUMBER
+%token <sval> ID
 
-/* Токены без семантического значения */
-%token IF ELSE WHILE PRINT
-%token EQEQ NEQ LE GE
-
-/* ── ПРИОРИТЕТЫ (от наименьшего к наибольшему) ──────── */
-/* %right для присваивания (правоассоциативное)         */
-%right '='
-
-/* Операторы сравнения — не ассоциативные
-   (нельзя писать a < b < c)                           */
-%nonassoc EQEQ NEQ '<' '>' LE GE
-
-/* Арифметика */
-%left  '+' '-'
-%left  '*' '/'
-%right UMINUS   /* псевдотокен для унарного минуса */
-
-/* ── ТИПЫ НЕТЕРМИНАЛОВ ──────────────────────────────── */
-%type <ival> expr
-
-/* ── РАЗРЕШЕНИЕ DANGLING ELSE ────────────────────────── 
-   Без этого: IF '(' expr ')' block ELSE block
-             IF '(' expr ')' block
-   Создают конфликт: увидев ELSE после первого if,
-   непонятно — это else для внешнего if или внутреннего.
-   %nonassoc с приоритетами решает это в пользу ближайшего if */
-%nonassoc LOWER_THAN_ELSE
-%nonassoc ELSE
+%type <dval> expr sum prod primary
+%type <sval> field_tail full_id
 
 %%
-/* ══ ГРАММАТИКА ══════════════════════════════════════ */
 
-/* Программа — список операторов */
 program:
     stmt_list
 ;
 
 stmt_list:
-    stmt_list stmt   /* левая рекурсия */
-  | /* пусто */      /* базовый случай: пустой список */
+    stmt
+  | stmt stmt_list
 ;
 
-/* Оператор */
 stmt:
-    VAR '=' expr ';'
-        {
-            /* Присваивание: сохраняем значение в таблицу символов */
-            symtab[$1] = $3;
-            printf("  → %c = %d\n", 'a' + $1, $3);
-        }
-
-  | PRINT expr ';'
-        {
-            printf("%d\n", $2);
-        }
-
-  | IF '(' expr ')' '{' stmt_list '}'  %prec LOWER_THAN_ELSE
-        {
-            /* Dangling else разрешается через %prec:
-               правилу явно назначен приоритет LOWER_THAN_ELSE,
-               который ниже, чем ELSE. Поэтому при конфликте
-               Bison выберет сдвиг ELSE (привяжет к ближайшему if). */
-            /* Семантическое действие stmt_list уже выполнено, поэтому 
-                в реальном интерпретаторе нам нужна другая техника.
-                Например построение и обход AST */
-        }
-
-  | IF '(' expr ')' '{' stmt_list '}' ELSE '{' stmt_list '}'
-        {
-            /* Обе ветви уже выполнены по факту разбора.
-               В реальном интерпретаторе нужен AST или генерация кода. */
-        }
-
-  | WHILE '(' expr ')' '{' stmt_list '}'
-        {
-            /* Аналогично: полноценный while требует AST. */
-        }
-
-  | expr ';'
-        {
-            /* Выражение как оператор: вычисляем и выводим */
-            printf("= %d\n", $1);
-        }
+    full_id '=' expr ';' {
+        vars[$1] = $3;
+        printf("%s = %f\n", $1, $3);
+    }
 ;
 
-/* Выражение — возвращает int через $$
-   Каждое правило: $$ = результат вычисления              */
+full_id:
+    ID field_tail {
+        std::string res = $1;
+        if ($2) res += $2;
+        $$ = strdup(res.c_str());
+    }
+;
+
+field_tail:
+    '.' ID field_tail {
+        std::string res = "." + std::string($2);
+        if ($3) res += $3;
+        $$ = strdup(res.c_str());
+    }
+  | /* empty */ {
+        $$ = nullptr;
+    }
+;
+
 expr:
-    expr '+' expr    { $$ = $1 + $3; }
-  | expr '-' expr    { $$ = $1 - $3; }
-  | expr '*' expr    { $$ = $1 * $3; }
-  | expr '/' expr    {
-                         if ($3 == 0) { yyerror("деление на ноль"); $$ = 0; }
-                         else $$ = $1 / $3;
-                     }
+    '-' sum { $$ = -$2; }
+  | sum     { $$ = $1; }
+;
 
-  /* Операторы сравнения возвращают 0 или 1 (как в C) */
-  | expr EQEQ expr   { $$ = ($1 == $3) ? 1 : 0; }
-  | expr NEQ  expr   { $$ = ($1 != $3) ? 1 : 0; }
-  | expr '<'  expr   { $$ = ($1 <  $3) ? 1 : 0; }
-  | expr '>'  expr   { $$ = ($1 >  $3) ? 1 : 0; }
-  | expr LE   expr   { $$ = ($1 <= $3) ? 1 : 0; }
-  | expr GE   expr   { $$ = ($1 >= $3) ? 1 : 0; }
+sum:
+    prod                { $$ = $1; }
+  | sum '+' prod        { $$ = $1 + $3; }
+  | sum '-' prod        { $$ = $1 - $3; }
+;
 
-  /* Унарный минус: %prec UMINUS переопределяет приоритет
-     этого правила. Без него "-2*3" могло бы разбираться
-     как "-(2*3)" вместо "(-2)*3"                         */
-  | '-' expr %prec UMINUS  { $$ = -$2; }
+prod:
+    primary             { $$ = $1; }
+  | prod '*' primary    { $$ = $1 * $3; }
+  | prod '/' primary    { $$ = $1 / $3; }
+;
 
-  | '(' expr ')'     { $$ = $2; }
-
-  /* Чтение переменной из таблицы символов */
-  | VAR              { $$ = symtab[$1]; }
-
-  /* Числовой литерал — значение пришло от лексера через yylval */
-  | NUMBER           { $$ = $1; }
+primary:
+    '(' expr ')' { $$ = $2; }
+  | NUMBER       { $$ = $1; }
+  | full_id {
+        if (vars.count($1))
+            $$ = vars[$1];
+        else {
+            printf("Undefined variable: %s\n", $1);
+            exit(1);
+        }
+    }
 ;
 
 %%
-/* ══ ЭПИЛОГ ══════════════════════════════════════════ */
 
-void yyerror(const char *s) {
-    fprintf(stderr, "Ошибка (строка ~%d): %s\n", yylineno_manual, s);
-}
-
-int main(int argc, char *argv[]) {
-    if (argc > 1) {
-        /* Если передан аргумент — читаем из файла */
-        FILE *f = fopen(argv[1], "r");
-        if (!f) { perror(argv[1]); return 1; }
-        extern FILE *yyin;
-        yyin = f;
-    }
-    printf("=== mini interpreter ===\n");
-    int result = yyparse();
-    if (result == 0) printf("=== OK ===\n");
-    return result;
+void yyerror(const char* s) {
+    printf("Parse error: %s\n", s);
+    exit(1);
 }
