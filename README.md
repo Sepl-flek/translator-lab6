@@ -76,10 +76,10 @@ data.value = (a.b + 2) * 3;
 Некорректные:
 
 ```txt
-a..b = 3;          // два подряд "."
-1a.b = 2;          // неверный id
-a.b = 1 * -2;      // унарный минус не допускается внутри Prod
-a = ;              // отсутствует выражение
+examples/invalid/bad.mini               // два подряд "."
+examples/invalid/bad_identifier.mini    // неверный id
+examples/invalid/bad_unary_minus.mini   // унарный минус не допускается внутри Prod
+examples/invalid/bad_missing_expr.mini  // отсутствует выражение
 ```
 
 ---
